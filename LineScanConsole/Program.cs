@@ -11,9 +11,11 @@ namespace LineScanConsole
 		static void Main(string[] args)
 		{
 			var lineScan = new LineScan();
-
-			lineScan.SetPEGMode((long)4096, (long)4096);
-			lineScan.Action();
+			long w = 4096;
+			long h = 1024;
+			lineScan.SetPEGMode(w, h);
+			//lineScan.Action();
+			lineScan.StartGrab();
 		}
 	}
 }
