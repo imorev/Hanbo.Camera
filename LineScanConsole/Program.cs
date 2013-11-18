@@ -13,7 +13,7 @@ namespace LineScanConsole
 		{
 			var lineScan = new LineScan();
 			long w = 4096;
-			long h = 1024;
+			long h = 2048;
 			lineScan.SetPEGMode(w, h);
 			lineScan.On_RunningMessage += lineScan_On_RunningMessage;
 			lineScan.On_ErrorOccured += lineScan_On_ErrorOccured;
