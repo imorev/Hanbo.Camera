@@ -13,14 +13,15 @@ namespace LineScanConsole
 		{
 			var lineScan = new LineScan();
 			long w = 4096;
-			long h = 2048;
+			long h = 2000;
 			lineScan.SetPEGMode(w, h);
 			lineScan.On_RunningMessage += lineScan_On_RunningMessage;
-			lineScan.On_ErrorOccured += lineScan_On_ErrorOccured;
 			lineScan.StartGrab();
-			while (Console.ReadLine() != "")
+			string msg = "";
+			while ((msg = Console.ReadLine()) != "")
 			{
-				Thread.Sleep(200);
+				Thread.Sleep(200); 
+				break;
 			}
 			//lineScan.StartGrab();
 		}

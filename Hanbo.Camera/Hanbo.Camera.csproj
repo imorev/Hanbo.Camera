@@ -33,9 +33,9 @@
     <Reference Include="halcondotnet">
       <HintPath>C:\Program Files\MVTec\HALCON-10.0\bin\dotnet35\halcondotnet.dll</HintPath>
     </Reference>
-    <Reference Include="PylonC.NET, Version=2.3.5.2633, Culture=neutral, PublicKeyToken=a77e8471c5919d5a, processorArchitecture=MSIL">
+    <Reference Include="PylonC.NET, Version=4.0.1.3425, Culture=neutral, PublicKeyToken=a77e8471c5919d5a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\Basler\pylon 2.3\pylonc.net\bin\PylonC.NET.dll</HintPath>
+      <HintPath>C:\Program Files\Basler\pylon 4\pylonc.net\bin\PylonC.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

@@ -1,3 +1,6 @@
+*.suo
+bin
+obj
 /LineScanConsole/bin/Debug/Hanbo.Camera.dll
 /LineScanConsole/bin/Debug/Hanbo.Camera.pdb
 /LineScanConsole/bin/Debug/LineScanConsole.exe
