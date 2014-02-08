@@ -11,16 +11,18 @@ namespace LineScanConsole
 	{
 		static void Main(string[] args)
 		{
-			var lineScan = new LineScan();
-			long w = 4096;
+			long w = 10000;
 			long h = 2000;
-			lineScan.SetPEGMode(w, h);
+			bool isPEGMode = true;
+			var lineScan = new LineScan(w, h, isPEGMode);
+
+			//lineScan.SetPEGMode(w, h);
 			lineScan.On_RunningMessage += lineScan_On_RunningMessage;
 			lineScan.StartGrab();
 			string msg = "";
 			while ((msg = Console.ReadLine()) != "")
 			{
-				Thread.Sleep(200); 
+				Thread.Sleep(100);
 				break;
 			}
 			//lineScan.StartGrab();

@@ -17,7 +17,15 @@ namespace LineScanWinApp
 		{
 			InitializeComponent();
 			_linescan = new LineScan();
-			_linescan.SetPEGMode((long)4096, (long)4096);
+			long w = 4096;
+			long h = 2000;
+			_linescan.SetPEGMode(w, h);
+			_linescan.On_RunningMessage += _linescan_On_RunningMessage;
+		}
+
+		void _linescan_On_RunningMessage(object sender, GrabImageEventArgs e)
+		{
+			
 		}
 
 		private void button1_Click(object sender, EventArgs e)

@@ -21,16 +21,17 @@ namespace Hanbo.Camera
 	public class LineScan
 	{
 		//Events
+		#region Events
 		public event GrabImageReadyDelegate On_Loaded;
 		public event GrabImageChangeDelegate On_GrabImageChanged;
 		public event GrabImageErrorDelegate On_ErrorOccured;
 		public event GrabImageRunningDelegate On_RunningMessage;
+		#endregion
 
 		#region private variables
 		private long _minHeight = 1;
 		private long _minWidth = 1;
 		private long _minGevSCPSPackSize = 1500;
-		private long _gainRaw = 1024;
 
 		private BackgroundWorker _bgworker;
 		private uint _timeout = 1000 * 10;// timeout 時間, 預設為 10 秒
@@ -39,6 +40,26 @@ namespace Hanbo.Camera
 		#endregion
 		string fpath = "";
 		string fdir = @"D:\tmp\images";
+
+		private long _GainRaw = 2000;
+
+		/// <summary>
+		/// 最大值為 2047, 最小值 256, 預設值 2000
+		/// </summary>
+		public long GainRaw
+		{
+			get
+			{
+				return _GainRaw;
+			}
+			set
+			{
+				if (value > 2047)
+					_GainRaw = 2047;
+				else if (value < 256)
+					_GainRaw = 256;
+			}
+		}
 
 		private long _PEGX, _PEGY;
 
@@ -61,12 +82,26 @@ namespace Hanbo.Camera
 		bool isAvailFrameStart;                /* Used for checking feature availability */
 		bool isAvailAcquisitionStart;          /* Used for checking feature availability */
 
+		private bool _isPEGMode;
 
+		#region 建構子
 		/// <summary>
 		/// 有兩個 Mode, FreeMode, and PEGMode
 		/// 預設為 FreeMode 模式
 		/// </summary>
 		public LineScan()
+		{
+			init();
+		}
+
+		public LineScan(long pegW, long pegH, bool isPEGMode)
+		{
+			_PEGX = pegW;
+			_PEGY = pegH;
+			_isPEGMode = isPEGMode;
+			init();
+		}
+		private void init()
 		{
 			_hDev = new PYLON_DEVICE_HANDLE(); /* Handle for the pylon device. */
 			_ExceptionMessageList = new List<string>();
@@ -78,6 +113,8 @@ namespace Hanbo.Camera
 			initialize();
 			initializeBackgroundWorker();
 		}
+		#endregion
+
 
 		/// <summary>
 		/// DeConstructor
@@ -137,6 +174,100 @@ namespace Hanbo.Camera
 				Pylon.DeviceSetIntegerFeature(_hDev, "GevSCPSPacketSize", _minGevSCPSPackSize);
 			}
 
+			//Free Run Settings
+			if (_isPEGMode)
+				setPEGParams(_PEGX, _PEGY);
+			else
+				setFreeRunParams();
+
+			setGainRaw();
+			setAOIControls();
+			setChunkFeature();
+			setStreamGrabber();
+			prepareDevice();
+		}
+		private void setAOIControls()
+		{
+			setDeviceFeature("CenterX", true);
+		}
+		private void setGainRaw()
+		{
+			//GainValue
+			setDeviceFeature("GainRaw", _GainRaw);
+		}
+
+		#region 設定裝置功能值
+		private bool setDeviceFeature(string featureName, object featureValue)
+		{
+			var success = false;
+			var isAvailable = isFeatureAvailable(featureName);
+			var isWritable = isFeatureWritable(featureName);
+			if (isAvailable && isWritable)
+			{
+				success = setFeatureValue(featureName, featureValue);
+			}
+			return success;
+		}
+
+		/// <summary>
+		/// 請優先選擇使用 setDeviceFeature(string featureName, object featureValue)，判斷此 Feature 是否存在且可寫入
+		/// </summary>
+		/// <param name="featureName"></param>
+		/// <param name="featureValue"></param>
+		/// <returns></returns>
+		private bool setFeatureValue(string featureName, object featureValue)
+		{
+			var success = true;
+			var featureType = featureValue.GetType().ToString();
+			try
+			{
+				switch (featureType)
+				{
+					case "System.Boolean":
+						Pylon.DeviceSetBooleanFeature(_hDev, featureName, (bool)featureValue);
+						break;
+					case "System.Int32":
+					case "System.Int64":
+						Pylon.DeviceSetIntegerFeature(_hDev, featureName, (long)featureValue);
+						break;
+					case "System.String":
+						Pylon.DeviceFeatureFromString(_hDev, featureName, (string)featureValue);
+						break;
+					case "System.Single":
+					case "System.Double":
+						Pylon.DeviceSetFloatFeature(_hDev, featureName, (double)featureValue);
+						break;
+				}
+			}
+			catch (Exception Ex)
+			{
+				success = false;
+				//ToDo
+				//throw;
+			}
+			return success;
+		}
+		private bool isFeatureWritable(string featureName)
+		{
+			return Pylon.DeviceFeatureIsWritable(_hDev, featureName);
+		}
+		private bool isFeatureAvailable(string featureName)
+		{
+			return Pylon.DeviceFeatureIsAvailable(_hDev, featureName);
+		}
+
+		#endregion
+
+
+
+
+
+
+		/// <summary>
+		/// 設定 ChunkMode 
+		/// </summary>
+		private void setChunkFeature()
+		{
 			/* Before enabling individual chunks, the chunk mode in general must be activated. */
 			isAvail = Pylon.DeviceFeatureIsWritable(_hDev, "ChunkModeActive");
 
@@ -160,6 +291,7 @@ namespace Hanbo.Camera
 			if (isAvail)
 			{
 				/* Select the frame counter chunk feature. */
+				/*Remark*/
 				Pylon.DeviceFeatureFromString(_hDev, "ChunkSelector", "Framecounter");
 
 				/* Can the chunk feature be activated? */
@@ -201,13 +333,6 @@ namespace Hanbo.Camera
 				notifyError("No chunk parser available.");
 				/* The transport layer doesn't provide a chunk parser. */
 			}
-
-			setStreamGrabber();
-
-			//Free Run Settings
-			setFreeRunParams();
-
-			prepareDevice();
 		}
 		#endregion
 
@@ -330,17 +455,6 @@ namespace Hanbo.Camera
 				}
 				notifyRunningMessage(String.Format("Grabbed frame {0} into buffer {1}.", nGrabs, bufferIndex));
 
-
-				/* Perform the image processing. */
-				try
-				{
-
-				}
-				catch (Exception ex)
-				{
-					notifyRunningMessage(ex.Message);
-				}
-
 				//Save Image
 				notifyRunningMessage("SAVE Image");
 				if (!Directory.Exists(fdir))
@@ -354,6 +468,7 @@ namespace Hanbo.Camera
 					var myBuf = buffer.Array;
 					notifyRunningMessage(String.Format("W: {0} H: {1}  Length: {2}", chunkWidth, chunkHeight, myBuf.Length));
 					var okToSave = (myBuf.Length >= (chunkWidth * chunkHeight));
+					notifyRunningMessage("Buffer Length: " + myBuf.Length);
 					notifyRunningMessage("Can Save: " + okToSave);
 					if (okToSave)
 					{
@@ -488,12 +603,6 @@ namespace Hanbo.Camera
 			{
 				Pylon.DeviceSetIntegerFeature(_hDev, "Width", _minWidth);
 			}
-			iswritable = Pylon.DeviceFeatureIsWritable(_hDev, "GainRaw");
-			if (iswritable)
-			{
-				Pylon.DeviceSetIntegerFeature(_hDev, "GainRaw", _gainRaw);
-			}
-
 
 			/* Check the available camera trigger mode(s) to select the appropriate one: acquisition start trigger mode (used by previous cameras;
 		   do not confuse with acquisition start command) or frame start trigger mode (equivalent to previous acquisition start trigger mode). */
@@ -537,16 +646,8 @@ namespace Hanbo.Camera
 
 		private void setPEGParams(long pegW, long pegH)
 		{
-			var iswritable = Pylon.DeviceFeatureIsWritable(_hDev, "Height");
-			if (iswritable)
-			{
-				Pylon.DeviceSetIntegerFeature(_hDev, "Height", pegH);
-			}
-			iswritable = Pylon.DeviceFeatureIsWritable(_hDev, "Width");
-			if (iswritable)
-			{
-				Pylon.DeviceSetIntegerFeature(_hDev, "Width", pegW);
-			}
+			setDeviceFeature("Height", pegH);
+			setDeviceFeature("Width", pegW);
 			/* Disable acquisition start trigger if available. */
 			if (Pylon.DeviceFeatureIsAvailable(_hDev, "EnumEntry_TriggerSelector_AcquisitionStart"))
 			{
